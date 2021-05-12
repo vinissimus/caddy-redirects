@@ -24,6 +24,7 @@ func TestParse(t *testing.T) {
 		locationHeader string
 	}{
 		{`redirecter {
+			domain "vinissimus.com"
 			host "127.0.0.1"
 			port 5432
 			user "patates"
@@ -31,6 +32,7 @@ func TestParse(t *testing.T) {
 			db_name "vinissimus"
 		}`, "/old-page-needs-redirect", "/new-page"},
 		{`redirecter {
+			domain "vinissimus.com"
 			host "127.0.0.1"
 			port 5432
 			user "patates"

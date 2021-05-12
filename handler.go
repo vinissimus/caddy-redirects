@@ -19,7 +19,7 @@ func init() {
 // Handler is an example; put your own type here.
 type Handler struct {
 	Pgds
-	domain     string
+	Domain     string
 	redirecter *Redirecter
 }
 
@@ -31,16 +31,16 @@ func (Handler) CaddyModule() caddy.ModuleInfo {
 	}
 }
 
-// Provision sets up m.
-func (h *Handler) Provision(ctx caddy.Context) error {
-	if h.Host == "" || h.Port == 0 || h.User == "" || h.Password == "" || h.DbName == "" {
+func (h *Handler) Validate() error {
+	if h.Domain == "" || h.Host == "" || h.Port == 0 || h.User == "" || h.Password == "" || h.DbName == "" {
 		return fmt.Errorf("Some values are missing")
 	}
+	return nil
+}
 
-	// TODO: get from context? get from caddyfile?
-	h.domain = "vinissimus.com"
-
-	h.redirecter = initRedirecter(h.Pgds, h.domain)
+// Provision sets up module
+func (h *Handler) Provision(ctx caddy.Context) error {
+	h.redirecter = initRedirecter(h.Pgds, h.Domain)
 	go h.redirecter.Reload()
 	return nil
 }
@@ -70,6 +70,12 @@ func (h *Handler) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 
 		for d.NextBlock(0) {
 			switch d.Val() {
+			case "domain":
+				args := d.RemainingArgs()
+				if len(args) != 1 {
+					return d.ArgErr()
+				}
+				h.Domain = args[0]
 			case "host":
 				args := d.RemainingArgs()
 				if len(args) != 1 {
@@ -133,5 +139,6 @@ func redirect(w http.ResponseWriter, r *http.Request, to string) error {
 
 var (
 	_ caddy.Provisioner           = (*Handler)(nil)
+	_ caddy.Validator             = (*Handler)(nil)
 	_ caddyhttp.MiddlewareHandler = (*Handler)(nil)
 )
