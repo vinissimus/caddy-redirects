@@ -11,6 +11,7 @@ require (
 	github.com/ory/dockertest v3.3.5+incompatible
 	github.com/ory/dockertest/v3 v3.6.5 // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
+	go.uber.org/zap v1.16.0
 	golang.org/x/net v0.0.0-20210510120150-4163338589ed // indirect
 	golang.org/x/sys v0.0.0-20210511113859-b0526f3d8744 // indirect
 )

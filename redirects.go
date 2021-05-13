@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	_ "github.com/lib/pq"
+	"go.uber.org/zap"
 )
 
 type Pgds struct {
@@ -19,16 +20,18 @@ type Redirecter struct {
 	Pgds
 	domain string
 	urlMap *map[string]string
+	logger *zap.Logger
 }
 
 var loader = Load
 
-func initRedirecter(pg Pgds, domain string) *Redirecter {
+func initRedirecter(pg Pgds, domain string, logger *zap.Logger) *Redirecter {
 	redirecter := Redirecter{
 		Pgds:   pg,
 		domain: domain,
+		logger: logger,
 	}
-	fmt.Printf("initRedirecter() for domain %s\n", domain)
+	logger.Info(fmt.Sprintf("initRedirecter() for domain %s\n", domain))
 	return &redirecter
 }
 
@@ -73,5 +76,6 @@ func Load(r *Redirecter) (map[string]string, error) {
 		}
 		newUrlMap[sourcePath] = destPath
 	}
+	r.logger.Info(fmt.Sprintf("Loaded %d urls for domain %s", len(newUrlMap), r.domain))
 	return newUrlMap, nil
 }

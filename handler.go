@@ -10,6 +10,7 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
+	"go.uber.org/zap"
 )
 
 func init() {
@@ -22,6 +23,7 @@ type Handler struct {
 	Pgds
 	Domain     string
 	redirecter *Redirecter
+	logger     *zap.Logger
 }
 
 // CaddyModule returns the Caddy module information.
@@ -41,7 +43,8 @@ func (h *Handler) Validate() error {
 
 // Provision sets up module
 func (h *Handler) Provision(ctx caddy.Context) error {
-	h.redirecter = initRedirecter(h.Pgds, h.Domain)
+	h.logger = ctx.Logger(h)
+	h.redirecter = initRedirecter(h.Pgds, h.Domain, h.logger)
 	go h.redirecter.Reload()
 	return nil
 }
@@ -121,12 +124,11 @@ func (h *Handler) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 
 func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
 	newPath, ok := h.redirecter.FindRedirect(r.URL.Path)
-	if !ok {
-		err := next.ServeHTTP(w, r)
-		return err
+	if ok {
+		return redirect(w, r, newPath)
+	} else {
+		return next.ServeHTTP(w, r)
 	}
-
-	return redirect(w, r, newPath)
 }
 
 func redirect(w http.ResponseWriter, r *http.Request, to string) error {

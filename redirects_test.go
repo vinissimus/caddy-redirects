@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/ory/dockertest"
+	"go.uber.org/zap"
 )
 
 func startPg(pgds *Pgds) (*sql.DB, func()) {
@@ -81,7 +82,8 @@ func TestRedirects(t *testing.T) {
 		}
 		res.LastInsertId()
 
-		redirecter := initRedirecter(*pgds, test.domain)
+		logger, _ := zap.NewDevelopment()
+		redirecter := initRedirecter(*pgds, test.domain, logger)
 		redirecter.Reload()
 
 		if got, _ := redirecter.FindRedirect(test.sourcePath); got != test.destPath {
