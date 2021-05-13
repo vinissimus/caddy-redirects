@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
+	"sync"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
@@ -14,43 +14,48 @@ import (
 )
 
 func init() {
-	caddy.RegisterModule(Handler{})
+	caddy.RegisterModule(Middleware{})
 	httpcaddyfile.RegisterHandlerDirective("redirecter", parseCaddyfile)
 }
 
-// Handler is an example; put your own type here.
-type Handler struct {
+var mutex = &sync.Mutex{}
+var redirecter *Redirecter
+
+type Middleware struct {
 	Pgds
-	Domain     string
-	redirecter *Redirecter
-	logger     *zap.Logger
+	logger *zap.Logger
 }
 
-// CaddyModule returns the Caddy module information.
-func (Handler) CaddyModule() caddy.ModuleInfo {
+func (Middleware) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
 		ID:  "http.handlers.redirecter",
-		New: func() caddy.Module { return new(Handler) },
+		New: func() caddy.Module { return new(Middleware) },
 	}
 }
 
-func (h *Handler) Validate() error {
-	if h.Domain == "" || h.Host == "" || h.Port == 0 || h.User == "" || h.Password == "" || h.DbName == "" {
+func (h *Middleware) Provision(ctx caddy.Context) error {
+	h.logger = ctx.Logger(h)
+
+	if h.Host == "" || h.Port == 0 || h.User == "" || h.Password == "" || h.DbName == "" {
 		return fmt.Errorf("Some values are missing")
 	}
-	return nil
-}
 
-// Provision sets up module
-func (h *Handler) Provision(ctx caddy.Context) error {
-	h.logger = ctx.Logger(h)
-	h.redirecter = initRedirecter(h.Pgds, h.Domain, h.logger)
-	go h.redirecter.Reload()
+	mutex.Lock()
+	defer mutex.Unlock()
+	if redirecter == nil {
+		h.logger.Info("Initializing redirecter singleton")
+		redirecter = initRedirecter(h.Pgds, h.logger)
+		err := redirecter.Reload()
+		if err != nil {
+			h.logger.Error("Failed to load redirecter", zap.Error(err))
+		}
+		return err
+	}
 	return nil
 }
 
 func parseCaddyfile(h httpcaddyfile.Helper) (caddyhttp.MiddlewareHandler, error) {
-	var handler Handler
+	handler := &Middleware{}
 	err := handler.UnmarshalCaddyfile(h.Dispenser)
 	return handler, err
 }
@@ -65,7 +70,7 @@ func parseCaddyfile(h httpcaddyfile.Helper) (caddyhttp.MiddlewareHandler, error)
 //         db_name "vinissimus"
 //     }
 //
-func (h *Handler) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
+func (h *Middleware) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	for d.Next() {
 		args := d.RemainingArgs()
 		if len(args) > 0 {
@@ -74,12 +79,6 @@ func (h *Handler) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 
 		for d.NextBlock(0) {
 			switch d.Val() {
-			case "domain":
-				args := d.RemainingArgs()
-				if len(args) != 1 {
-					return d.ArgErr()
-				}
-				h.Domain = args[0]
 			case "host":
 				args := d.RemainingArgs()
 				if len(args) != 1 {
@@ -122,26 +121,38 @@ func (h *Handler) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	return nil
 }
 
-func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
-	newPath, ok := h.redirecter.FindRedirect(r.URL.Path)
+func (h *Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
+	newPath, ok := redirecter.FindRedirect(buildUrlWithoutQuery(r))
 	if ok {
-		return redirect(w, r, newPath)
+		http.Redirect(w, r, newPath, http.StatusPermanentRedirect)
+		return nil
 	} else {
 		return next.ServeHTTP(w, r)
 	}
 }
 
-func redirect(w http.ResponseWriter, r *http.Request, to string) error {
-	for strings.HasPrefix(to, "//") {
-		// prevent path-based open redirects
-		to = strings.TrimPrefix(to, "/")
+func buildUrlWithoutQuery(r *http.Request) string {
+	newUrl := *r.URL
+	newUrl.Host = r.Host
+	newUrl.Scheme = "http"
+	if r.TLS != nil {
+		newUrl.Scheme = "https"
 	}
-	http.Redirect(w, r, to, http.StatusPermanentRedirect)
-	return nil
+	newUrl.RawQuery = ""
+	return newUrl.String()
+}
+
+func getStringVar(ctx *caddy.Context, name string) string {
+	switch vv := caddyhttp.GetVar(ctx, name); vv.(type) {
+	case string:
+		return (vv).(string)
+	default:
+		return ""
+	}
 }
 
 var (
-	_ caddy.Provisioner           = (*Handler)(nil)
-	_ caddy.Validator             = (*Handler)(nil)
-	_ caddyhttp.MiddlewareHandler = (*Handler)(nil)
+	_ caddy.Provisioner           = (*Middleware)(nil)
+	_ caddyfile.Unmarshaler       = (*Middleware)(nil)
+	_ caddyhttp.MiddlewareHandler = (*Middleware)(nil)
 )

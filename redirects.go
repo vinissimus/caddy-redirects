@@ -18,29 +18,27 @@ type Pgds struct {
 
 type Redirecter struct {
 	Pgds
-	domain string
 	urlMap *map[string]string
 	logger *zap.Logger
 }
 
 var loader = Load
 
-func initRedirecter(pg Pgds, domain string, logger *zap.Logger) *Redirecter {
+func initRedirecter(pg Pgds, logger *zap.Logger) *Redirecter {
 	redirecter := Redirecter{
 		Pgds:   pg,
-		domain: domain,
 		logger: logger,
 	}
-	logger.Info(fmt.Sprintf("initRedirecter() for domain %s\n", domain))
 	return &redirecter
 }
 
-func (r *Redirecter) Reload() {
+func (r *Redirecter) Reload() error {
 	urlMap, err := loader(r)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	r.urlMap = &urlMap
+	return nil
 }
 
 func (r *Redirecter) FindRedirect(path string) (string, bool) {
@@ -62,7 +60,7 @@ func Load(r *Redirecter) (map[string]string, error) {
 	defer db.Close()
 
 	newUrlMap := make(map[string]string)
-	rows, err := db.Query("SELECT src_path, dest_path FROM public.redirects WHERE domain = $1", r.domain)
+	rows, err := db.Query("SELECT src_path, dst_path FROM public.redirects")
 	if err != nil {
 		return nil, err
 	}
@@ -76,6 +74,6 @@ func Load(r *Redirecter) (map[string]string, error) {
 		}
 		newUrlMap[sourcePath] = destPath
 	}
-	r.logger.Info(fmt.Sprintf("Loaded %d urls for domain %s", len(newUrlMap), r.domain))
+	r.logger.Info(fmt.Sprintf("Loaded %d urls", len(newUrlMap)))
 	return newUrlMap, nil
 }

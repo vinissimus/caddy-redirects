@@ -5,7 +5,6 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
@@ -17,37 +16,46 @@ func next(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func TestParse(t *testing.T) {
+func TestUrlWithoutQuery(t *testing.T) {
+	r := httptest.NewRequest("GET", "/path?a=1&b=2", strings.NewReader(""))
+	r.Host = "domain.cat"
+	got := buildUrlWithoutQuery(r)
+	expected := "http://domain.cat/path"
+	if expected != got {
+		t.Errorf("Expected %s got %s", expected, got)
+	}
+}
+
+func TestRedirect(t *testing.T) {
 	tests := []struct {
 		caddyfile      string
 		reqPath        string
 		locationHeader string
 	}{
 		{`redirecter {
-			domain "vinissimus.com"
 			host "127.0.0.1"
 			port 5432
 			user "patates"
 			password "bullides"
 			db_name "vinissimus"
-		}`, "/old-page-needs-redirect", "/new-page"},
+		}`, "https://sub.domain.cat/old-page-needs-redirect", "/new-page"},
 		{`redirecter {
-			domain "vinissimus.com"
 			host "127.0.0.1"
 			port 5432
 			user "patates"
 			password "bullides"
 			db_name "vinissimus"
-		}`, "/working-page", ""},
+		}`, "https://sub.domain.cat/working-page", ""},
 	}
 
 	loader = func(r *Redirecter) (map[string]string, error) {
 		newUrlMap := make(map[string]string)
-		newUrlMap["/old-page-needs-redirect"] = "/new-page"
+		newUrlMap["https://sub.domain.cat/old-page-needs-redirect"] = "/new-page"
 		return newUrlMap, nil
 	}
 
 	for i, test := range tests {
+		redirecter = nil
 		h := httpcaddyfile.Helper{
 			Dispenser: caddyfile.NewTestDispenser(test.caddyfile),
 		}
@@ -55,22 +63,13 @@ func TestParse(t *testing.T) {
 		if err != nil {
 			panic(err)
 		}
-		handler := actual.(Handler)
+		handler := actual.(*Middleware)
 		errProv := handler.Provision(caddy.Context{})
 		if errProv != nil {
 			panic(errProv)
 		}
 
-		// Wait until goroutine ran
-		for j := 1; j <= 10; j++ {
-			if handler.redirecter.urlMap != nil {
-				break
-			}
-			time.Sleep(1 * time.Second)
-		}
-
 		r := httptest.NewRequest("GET", test.reqPath, strings.NewReader(""))
-		r.RemoteAddr = "1.2.3.4"
 		w := httptest.NewRecorder()
 
 		handler.ServeHTTP(w, r, caddyhttp.HandlerFunc(next))
