@@ -28,7 +28,7 @@ func initRedirecter(pg Pgds, domain string) *Redirecter {
 		Pgds:   pg,
 		domain: domain,
 	}
-	fmt.Printf("initRedirecter %+v\n", redirecter)
+	fmt.Printf("initRedirecter() for domain %s\n", domain)
 	return &redirecter
 }
 

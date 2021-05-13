@@ -14,6 +14,7 @@ import (
 
 func init() {
 	caddy.RegisterModule(Handler{})
+	httpcaddyfile.RegisterHandlerDirective("redirecter", parseCaddyfile)
 }
 
 // Handler is an example; put your own type here.
