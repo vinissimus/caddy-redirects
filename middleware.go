@@ -34,7 +34,6 @@ func (Middleware) CaddyModule() caddy.ModuleInfo {
 	}
 }
 
-// Provision sets up module
 func (h *Middleware) Provision(ctx caddy.Context) error {
 	h.logger = ctx.Logger(h)
 

@@ -6,7 +6,6 @@ import (
 	"net/url"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
@@ -72,14 +71,6 @@ func TestRedirect(t *testing.T) {
 		errProv := handler.Provision(caddy.Context{})
 		if errProv != nil {
 			panic(errProv)
-		}
-
-		// Wait until goroutine ran
-		for j := 1; j <= 10; j++ {
-			if redirecter.urlMap != nil {
-				break
-			}
-			time.Sleep(1 * time.Second)
 		}
 
 		r := httptest.NewRequest("GET", test.reqPath, strings.NewReader(""))
