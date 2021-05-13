@@ -32,7 +32,7 @@ func startPg(pgds *Pgds) (*sql.DB, func()) {
 			return err
 		}
 		port, _ := strconv.Atoi(resource.GetPort("5432/tcp"))
-		_, err = db.Exec("CREATE TABLE public.redirects (domain varchar(100), src_path varchar(350), dest_path varchar(350));")
+		_, err = db.Exec("CREATE TABLE public.redirects (src_path varchar(500), dst_path varchar(500));")
 		if err != nil {
 			return err
 		}
@@ -63,19 +63,18 @@ func TestRedirects(t *testing.T) {
 	defer stopPg()
 
 	tests := []struct {
-		domain     string
 		sourcePath string
 		destPath   string
 	}{
-		{"vinissimus.com", "/blog/garnachas-de-culto/", "/es/garnacha"},
+		{"https://www.vinissimus.com/blog/garnachas-de-culto/", "/es/garnacha"},
 	}
 
 	loader = Load
 
 	for i, test := range tests {
 		res, err := db.Exec(
-			"INSERT INTO public.redirects (domain, src_path, dest_path) VALUES ($1, $2, $3)",
-			test.domain, test.sourcePath, test.destPath,
+			"INSERT INTO public.redirects (src_path, dst_path) VALUES ($1, $2)",
+			test.sourcePath, test.destPath,
 		)
 		if err != nil {
 			panic(err)
@@ -83,7 +82,7 @@ func TestRedirects(t *testing.T) {
 		res.LastInsertId()
 
 		logger, _ := zap.NewDevelopment()
-		redirecter := initRedirecter(*pgds, test.domain, logger)
+		redirecter := initRedirecter(*pgds, logger)
 		redirecter.Reload()
 
 		if got, _ := redirecter.FindRedirect(test.sourcePath); got != test.destPath {
