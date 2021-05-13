@@ -28,6 +28,7 @@ func initRedirecter(pg Pgds, domain string) *Redirecter {
 		Pgds:   pg,
 		domain: domain,
 	}
+	fmt.Printf("initRedirecter %+v\n", redirecter)
 	return &redirecter
 }
 
@@ -41,10 +42,6 @@ func (r *Redirecter) Reload() {
 
 func (r *Redirecter) FindRedirect(path string) (string, bool) {
 	urlMap := *r.urlMap
-	// mapDomain, ok := ()[domain]
-	// if !ok {
-	// 	return "", false
-	// }
 	val, ok := urlMap[path]
 	return val, ok
 }

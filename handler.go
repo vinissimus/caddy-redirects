@@ -26,7 +26,7 @@ type Handler struct {
 // CaddyModule returns the Caddy module information.
 func (Handler) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
-		ID:  "http.handler.redirecter",
+		ID:  "http.handlers.redirecter",
 		New: func() caddy.Module { return new(Handler) },
 	}
 }
