@@ -3,7 +3,6 @@ package redirecter
 import (
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"strings"
 	"testing"
 
@@ -18,13 +17,10 @@ func next(w http.ResponseWriter, r *http.Request) error {
 }
 
 func TestUrlWithoutQuery(t *testing.T) {
-	url := url.URL{}
-	url.Host = "domain.cat"
-	url.Scheme = "https"
-	url.Path = "/path"
-	url.RawQuery = "?a=1&b=2"
-	got := urlWithoutQuery(url)
-	expected := "https://domain.cat/path"
+	r := httptest.NewRequest("GET", "/path?a=1&b=2", strings.NewReader(""))
+	r.Host = "domain.cat"
+	got := buildUrlWithoutQuery(r)
+	expected := "http://domain.cat/path"
 	if expected != got {
 		t.Errorf("Expected %s got %s", expected, got)
 	}
@@ -42,14 +38,14 @@ func TestRedirect(t *testing.T) {
 			user "patates"
 			password "bullides"
 			db_name "vinissimus"
-		}`, "/old-page-needs-redirect", "/new-page"},
+		}`, "https://sub.domain.cat/old-page-needs-redirect", "/new-page"},
 		{`redirecter {
 			host "127.0.0.1"
 			port 5432
 			user "patates"
 			password "bullides"
 			db_name "vinissimus"
-		}`, "/working-page", ""},
+		}`, "https://sub.domain.cat/working-page", ""},
 	}
 
 	loader = func(r *Redirecter) (map[string]string, error) {
@@ -74,8 +70,6 @@ func TestRedirect(t *testing.T) {
 		}
 
 		r := httptest.NewRequest("GET", test.reqPath, strings.NewReader(""))
-		r.URL.Host = "sub.domain.cat"
-		r.URL.Scheme = "https"
 		w := httptest.NewRecorder()
 
 		handler.ServeHTTP(w, r, caddyhttp.HandlerFunc(next))

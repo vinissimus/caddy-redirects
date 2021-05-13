@@ -3,7 +3,6 @@ package redirecter
 import (
 	"fmt"
 	"net/http"
-	"net/url"
 	"strconv"
 	"sync"
 
@@ -123,7 +122,7 @@ func (h *Middleware) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 }
 
 func (h *Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
-	newPath, ok := redirecter.FindRedirect(urlWithoutQuery(*r.URL))
+	newPath, ok := redirecter.FindRedirect(buildUrlWithoutQuery(r))
 	if ok {
 		http.Redirect(w, r, newPath, http.StatusPermanentRedirect)
 		return nil
@@ -132,9 +131,24 @@ func (h *Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request, next cadd
 	}
 }
 
-func urlWithoutQuery(u url.URL) string {
-	u.RawQuery = ""
-	return u.String()
+func buildUrlWithoutQuery(r *http.Request) string {
+	newUrl := *r.URL
+	newUrl.Host = r.Host
+	newUrl.Scheme = "http"
+	if r.TLS != nil {
+		newUrl.Scheme = "https"
+	}
+	newUrl.RawQuery = ""
+	return newUrl.String()
+}
+
+func getStringVar(ctx *caddy.Context, name string) string {
+	switch vv := caddyhttp.GetVar(ctx, name); vv.(type) {
+	case string:
+		return (vv).(string)
+	default:
+		return ""
+	}
 }
 
 var (
