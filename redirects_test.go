@@ -72,14 +72,13 @@ func TestRedirects(t *testing.T) {
 	loader = Load
 
 	for i, test := range tests {
-		res, err := db.Exec(
+		_, err := db.Exec(
 			"INSERT INTO public.redirects (src_path, dst_path) VALUES ($1, $2)",
 			test.sourcePath, test.destPath,
 		)
 		if err != nil {
 			panic(err)
 		}
-		res.LastInsertId()
 
 		logger, _ := zap.NewDevelopment()
 		redirecter := initRedirecter(*pgds, logger)

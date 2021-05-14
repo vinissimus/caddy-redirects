@@ -142,15 +142,6 @@ func buildUrlWithoutQuery(r *http.Request) string {
 	return newUrl.String()
 }
 
-func getStringVar(ctx *caddy.Context, name string) string {
-	switch vv := caddyhttp.GetVar(ctx, name); vv.(type) {
-	case string:
-		return (vv).(string)
-	default:
-		return ""
-	}
-}
-
 var (
 	_ caddy.Provisioner           = (*Middleware)(nil)
 	_ caddyfile.Unmarshaler       = (*Middleware)(nil)
