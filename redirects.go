@@ -3,6 +3,7 @@ package redirecter
 import (
 	"database/sql"
 	"fmt"
+	"sync/atomic"
 
 	_ "github.com/lib/pq"
 	"go.uber.org/zap"
@@ -18,7 +19,7 @@ type Pgds struct {
 
 type Redirecter struct {
 	Pgds
-	urlMap *map[string]string
+	urlMap atomic.Value
 	logger *zap.Logger
 }
 
@@ -37,12 +38,12 @@ func (r *Redirecter) Reload() error {
 	if err != nil {
 		return err
 	}
-	r.urlMap = &urlMap
+	r.urlMap.Store(urlMap)
 	return nil
 }
 
 func (r *Redirecter) FindRedirect(path string) (string, bool) {
-	urlMap := *r.urlMap
+	urlMap := (r.urlMap.Load()).(map[string]string)
 	val, ok := urlMap[path]
 	return val, ok
 }
