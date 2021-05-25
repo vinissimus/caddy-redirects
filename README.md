@@ -7,12 +7,12 @@ The entire table is loaded in-memory during Caddy startup and can be reloaded us
 
 The plugin expects a table named `redirects` with at least these fields:
 ```sql
-CREATE TABLE redirects (src_path varchar(500), dst_path varchar(500));
+CREATE TABLE redirects (src_url varchar(500), dst_path varchar(500));
 ```
 
 This is an example redirect:
 ```sql
-INSERT INTO redirects (src_path, dst_path)
+INSERT INTO redirects (src_url, dst_path)
 VALUES ('https://www.vinissimus.com/blog/garnachas-de-culto/', '/es/garnacha')
 ```
 

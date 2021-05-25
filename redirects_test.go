@@ -32,7 +32,7 @@ func startPg(pgds *Pgds) (*sql.DB, func()) {
 			return err
 		}
 		port, _ := strconv.Atoi(resource.GetPort("5432/tcp"))
-		_, err = db.Exec("CREATE TABLE public.redirects (src_path varchar(500), dst_path varchar(500));")
+		_, err = db.Exec("CREATE TABLE public.redirects (src_url varchar(500), dst_path varchar(500));")
 		if err != nil {
 			return err
 		}
@@ -73,7 +73,7 @@ func TestRedirects(t *testing.T) {
 
 	for i, test := range tests {
 		_, err := db.Exec(
-			"INSERT INTO public.redirects (src_path, dst_path) VALUES ($1, $2)",
+			"INSERT INTO public.redirects (src_url, dst_path) VALUES ($1, $2)",
 			test.sourcePath, test.destPath,
 		)
 		if err != nil {

@@ -61,7 +61,7 @@ func Load(r *Redirecter) (map[string]string, error) {
 	defer db.Close()
 
 	newUrlMap := make(map[string]string)
-	rows, err := db.Query("SELECT src_path, dst_path FROM public.redirects")
+	rows, err := db.Query("SELECT src_url, dst_path FROM public.redirects")
 	if err != nil {
 		return nil, err
 	}
