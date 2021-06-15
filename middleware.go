@@ -124,7 +124,7 @@ func (h *Middleware) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 func (h *Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
 	newPath, ok := redirecter.FindRedirect(buildUrlWithoutQuery(r))
 	if ok {
-		http.Redirect(w, r, newPath, http.StatusPermanentRedirect)
+		http.Redirect(w, r, newPath, http.StatusMovedPermanently)
 		return nil
 	} else {
 		return next.ServeHTTP(w, r)
