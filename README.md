@@ -1,9 +1,9 @@
 # caddy-redirects
 
-This plugins provides a middleware that redirects specific paths to other paths.
-The mapping between the matching path and the dest path is stored in a PostgresSQL table.
+This plugins provides a middleware that redirects matching URL to another path.
+The mapping between the matching URL and the dest path is stored in a PostgresSQL table.
 The entire table is loaded in-memory during Caddy startup and can be reloaded using the endpoint
-`http://caddy:2019/redirecter/admin`
+`http://caddy:2019/redirecter/reload`
 
 The plugin expects a table named `redirects` with at least these fields:
 ```sql
